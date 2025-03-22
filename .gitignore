@@ -1,0 +1,24 @@
+# MPLAB X specific files
+nbproject/private/
+nbproject/Makefile-*
+nbproject/configurations.xml
+nbproject/project.xml
+
+# MPLAB X output directories
+dist/
+build/
+
+# MPLAB Harmony specific files
+*.X/nbproject/private/
+*.X/dist/
+*.X/build/
+
+# General files to ignore
+*.log
+*.bak
+*.tmp
+*.swp
+*.swo
+*.DS_Store
+*.X/.generated_files/
+Thumbs.db
