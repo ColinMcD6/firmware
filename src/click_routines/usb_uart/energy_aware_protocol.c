@@ -74,12 +74,9 @@ volatile uint32_t msCount = 0;
 #define ENERGY 2000 // total number of messages the node can send before it dies
 char node_uid[] = "P2"; //2
 uint32_t msg_count = 0;
-uint8_t cluster_head = 0;
+uint8_t cluster_head = 1;
 
 #define MESSAGE_RATE_MS 10000UL
-
-
-
 
 /**
   Section: Example Code
@@ -96,10 +93,6 @@ uint8_t change_channel[] = "AT+CCHANGE:0D\r"; // that's 10 hex! channels go from
 uint8_t leave_network[] = "AT+DASSL\r";
 uint8_t join_network[] = "AT+JN\r";
 uint8_t rdatab[] = "AT+RDATAB:50\r";
-
-//char out_string[200];
-char voltage_string[200];
-char sink_uid[] = "1MSGPMIN";
 
 // Fires every 1ms
 void SysTick_Handler()
@@ -194,19 +187,15 @@ void energy_aware_protocol(void) {
         printf("\r\n");
     }
     
-    void send_message() {
+    void send_message(uint8_t *msg) {
         usb_uart_USART_Write(rdatab,13);
         while(usb_uart_USART_WriteIsBusy());
         // need to wait for an "OK" to come through
         usb_uart_USART_Read((uint8_t *)&read_chars,2);
         while(usb_uart_USART_ReadIsBusy()); // do nothing
-        
-        generate_data_message_rdatab((char *)&msg, (char *)&node_uid, (int) msg_count);
-        print_msg(msg);
         usb_uart_USART_Write(msg, MSG_LENGTH);
         while(usb_uart_USART_WriteIsBusy());
         msg_count++;
-        
     }
     
     uint8_t id_index = 0;
@@ -233,6 +222,11 @@ void energy_aware_protocol(void) {
         char type = 'N';
         if (msg_type == DATA) type = 'D';
         printf("Received a message: Type=%c, ID=%s, Value=%s\r\n", type, id, value);
+        if (cluster_head) {
+            generate_sink_message_rdatab((char *)&msg, (char *)&node_uid, (char *)&id, (char *) value);
+            print_msg(msg);
+            send_message(msg);
+        }
     }
     
     ReadState nextState(ReadState currentState, char read_character) {
@@ -329,7 +323,9 @@ void energy_aware_protocol(void) {
         
         //Enable for RDATAB
         if ((msCount % MESSAGE_RATE_MS) == 0){
-            send_message();
+            generate_data_message_rdatab((char *)&msg, (char *)&node_uid, (int) msg_count);
+            print_msg(msg);
+            send_message(msg);
         }
     }
 }
