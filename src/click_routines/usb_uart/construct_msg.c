@@ -30,3 +30,17 @@ void generate_sink_message_rdatab(char *msg, char *uid, char *origin_uid, char *
         msg[n+padding_length] = '\0';
     }
 }
+
+void generate_cluster_head_message_rdatab(char *msg, char *uid, double random_dbl) {
+    int n = snprintf(msg, MSG_LENGTH, ">C:%s:$%f$<", uid, random_dbl);
+    
+    int padding_length = MSG_LENGTH - n;
+    
+    if (padding_length > 0) {
+        for (int i = 0; i < padding_length-1; i++) {
+            msg[n+i] = 'X';
+        }
+        msg[n+padding_length-1] = '\r';
+        msg[n+padding_length] = '\0';
+    }
+}

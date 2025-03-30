@@ -22,7 +22,7 @@ void reset_value() {
     value_index = 0;
 }
 
-ReadState nextState(ReadState currentState, char read_character) {
+ReadState next_read_state(ReadState currentState, char read_character) {
     switch (currentState) {
         case WAITING_FOR_MESSAGE:
             if (read_character == '>') return READING_MESSAGE_TYPE;
@@ -32,6 +32,10 @@ ReadState nextState(ReadState currentState, char read_character) {
             if (read_character == 'D') {
 //                printf("Read D\r\n");
                 message.message_type = DATA;
+                return WAITING_FOR_ID;
+            }
+            else if (read_character == 'C') {
+                message.message_type = CLUSTER_HEAD;
                 return WAITING_FOR_ID;
             }
             else return WAITING_FOR_MESSAGE;

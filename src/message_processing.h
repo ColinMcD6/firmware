@@ -29,7 +29,7 @@ typedef struct {
     char value[MAX_VALUE_LENGTH];
 } Message;
 
-ReadState nextState(ReadState currentState, char read_character);
+ReadState next_read_state(ReadState currentState, char read_character);
 
 void get_message(Message *message);
 

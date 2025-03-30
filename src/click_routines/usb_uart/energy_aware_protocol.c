@@ -55,6 +55,8 @@
 #include "energy_aware_protocol.h"
 #include <xc.h>
 #include "message_processing.h"
+#include "election_utils.h"
+#include "state_management.h"
 
 // setup our heartbeat to be 1ms: we overflow at 1ms intervals with a 48MHz clock
 // uses the SysTicks unit so that we get reliable debugging (timer stops on breakpoints)
@@ -67,12 +69,15 @@
 // NOTE: this overflows every ~50 days, so I'm not going to care here...
 volatile uint32_t msCount = 0;
 
+// For syncing elections
+volatile uint32_t election_clock = 0;
+
 // Node Parameters and variables
 #define PAIRS 1
 #define ENERGY 2000 // total number of messages the node can send before it dies
-char node_uid[] = "P1"; //2
+char node_uid[] = "P2"; //2
 uint32_t msg_count = 0;
-uint8_t cluster_head = 0;
+uint8_t cluster_head = 1;
 
 #define MESSAGE_RATE_MS 10000UL
 
@@ -92,7 +97,8 @@ uint8_t leave_network[] = "AT+DASSL\r";
 uint8_t join_network[] = "AT+JN\r";
 uint8_t rdatab[] = "AT+RDATAB:50\r";
 
-ReadState state = WAITING_FOR_MESSAGE;
+ReadState read_state = WAITING_FOR_MESSAGE;
+PhaseState phase_state = DATA_COLLECTION;
 
 uint8_t msg[MSG_LENGTH+1];
 uint8_t read_chars[100];
@@ -103,6 +109,7 @@ Message message;
 void SysTick_Handler()
 {
   msCount++;
+  election_clock++;
 }
 
 static void configure_node() {
@@ -127,7 +134,6 @@ static void configure_node() {
     while(usb_uart_USART_ReadIsBusy()); // do nothing
 }
 
-    
 void print_msg(uint8_t *msg) {
     size_t i = 0;
     while (i < MSG_LENGTH && msg[i] != '\0') {
@@ -196,8 +202,8 @@ void energy_aware_protocol(void) {
 
         if (!usb_uart_USART_ReadIsBusy()){
             printf("%c", read_chars[0]);
-            state = nextState(state, read_chars[0]);
-            if (state == MESSAGE_READY) {
+            read_state = next_read_state(read_state, read_chars[0]);
+            if (read_state == MESSAGE_READY) {
                 printf("Message is ready!\r\n");
                 get_message(&message);
                 process_message();
@@ -235,7 +241,22 @@ void energy_aware_protocol(void) {
                 print_msg(msg);
                 send_message(msg);
             }
-            
+        }
+        
+        phase_state = next_phase_state(phase_state, election_clock);
+        
+        if (phase_state == CLUSTER_HEAD_SELECTION) {
+            double threshold = get_threshold(0.5);
+            double random_dbl = get_random_double();
+            if (random_dbl < threshold) {
+                printf("I should be cluster head!\r\n");
+                generate_cluster_head_message_rdatab((char *)&msg, (char *)&node_uid, random_dbl);
+                print_msg(msg);
+                send_message(msg);
+            }
+            else {
+                printf("I should not be cluster head!\r\n");
+            }
         }
     }
 }
