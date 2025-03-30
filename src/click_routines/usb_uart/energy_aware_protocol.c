@@ -78,6 +78,7 @@ volatile uint32_t election_clock = 0;
 char node_uid[] = "P2"; //2
 uint32_t msg_count = 0;
 uint8_t cluster_head = 1;
+double random_dbl = 1.0;
 
 #define MESSAGE_RATE_MS 10000UL
 
@@ -247,15 +248,17 @@ void energy_aware_protocol(void) {
         
         if (phase_state == CLUSTER_HEAD_SELECTION) {
             double threshold = get_threshold(0.5);
-            double random_dbl = get_random_double();
+            random_dbl = get_random_double();
             if (random_dbl < threshold) {
                 printf("I should be cluster head!\r\n");
                 generate_cluster_head_message_rdatab((char *)&msg, (char *)&node_uid, random_dbl);
+                cluster_head = 1;
                 print_msg(msg);
                 send_message(msg);
             }
             else {
                 printf("I should not be cluster head!\r\n");
+                cluster_head = 0;
             }
         }
     }
